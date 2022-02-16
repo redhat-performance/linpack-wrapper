@@ -211,6 +211,12 @@ while [[ $# -gt 0 ]]; do
         esac
 done
 
+cp ${to_home_root}/${to_user}/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
+if [ $? -ne 0 ]; then
+	echo Error, did not find xlinpack_xeon64-NEW
+fi
+chmod 755 ${run_dir}/linpack/xlinpack_xeon64
+
 for iteration in  `seq 1 1 $to_times_to_run`
 do
 	out_file=/tmp/${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_iteration_$iteration.out
