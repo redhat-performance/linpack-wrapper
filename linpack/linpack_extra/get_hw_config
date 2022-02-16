@@ -1,0 +1,125 @@
+#!/bin/bash
+
+lscpu > /tmp/lscpu
+NUMB_CPUS=`grep "^CPU(s):" /tmp/lscpu | cut -d: -f 2`
+CORES_PER_SOCKET=`grep "Core(s) per socket" /tmp/lscpu | cut -d: -f 2`
+THREADS_PER_CORE=`grep "Thread(s) per core" /tmp/lscpu | cut -d: -f 2`
+NUMB_SOCKETS=`grep "Socket(s):" /tmp/lscpu | cut -d: -f 2`
+
+
+hyper=`egrep '(-|,)' /tmp/hyper_list`
+
+echo numb_cpus: $NUMB_CPUS
+echo cores_per_socket: $CORES_PER_SOCKET
+echo threads_per_core: $THREADS_PER_CORE
+echo numb_sockets: $NUMB_SOCKETS
+
+lscpu  -p=CPU,NODE,SOCKET,CORE | grep -v "#" > /tmp/lscpu.parse
+
+core_cnt=0
+node_cnt=0
+socket_cnt=0
+hypsocket_cnt=0
+nhypsocket_cnt=0
+no_hyper=0
+hyper_off=1
+
+# Go through the lscpu.parse list and build the cores, sockets and node mappings
+#
+
+input="/tmp/lscpu.parse"
+while IFS= read -r line
+do
+	cpuid=`echo ${line} | cut -d',' -f 1`
+	nodeid=`echo ${line} | cut -d',' -f 2`
+	socketid=`echo ${line} | cut -d',' -f 3`
+	coreid=`echo ${line} | cut -d',' -f 4`
+
+	if [ -z "${node_mapping[${nodeid}]}" ]; then
+		let "node_cnt=$node_cnt+1"
+		node_mapping[${nodeid}]=$cpuid
+	else
+		node_mapping[${nodeid}]+=","$cpuid
+	fi
+
+	if [ -z "${socket_mapping[${socketid}]}" ]; then
+		let "socket_cnt=$socket_cnt+1"
+		socket_mapping[${socketid}]=$cpuid
+	else
+		socket_mapping[${socketid}]+=","$cpuid
+	fi
+
+	if [ -z "${coreid_mapping[${coreid}]}" ]; then
+		let "core_cnt=$core_cnt+1"
+		coreid_mapping[${coreid}]=$cpuid
+	else
+		coreid_mapping[${coreid}]+=","$cpuid
+	fi
+
+done < "$input"
+
+#
+# Lets get the cpus for non hyper threads
+#
+cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list | sort -nu | sed s/-/,/ > /tmp/hyper_list
+
+# First column is the non hyper threads.
+input="/tmp/hyper_list"
+while IFS= read -r line
+do
+	nhypcpuid=`echo ${line} | cut -d',' -f 1`
+	hypcpuid=`echo ${line} | cut -d',' -f 2`
+
+	if [ $hypcpuid -eq $nhypcpuid ]; then
+		no_hyper=hyper_off
+	else
+		look_for="^$nhypcpuid,"
+		nhyp_sockid=`grep ${look_for} /tmp/lscpu.parse  | cut -d',' -f3`
+		look_for="^$hypcpuid,"
+		hyp_sockid=`grep ${look_for} /tmp/lscpu.parse | cut -d',' -f3`
+	
+		if [ -z "${nhyp_mapping[${nhyp_sockid}]}" ]; then
+			let "nhypsocket_cnt=$nhypsocket_cnt+1"
+			nhyp_mapping[${nhyp_sockid}]=$nhypcpuid
+		else
+			nhyp_mapping[${nhyp_sockid}]+=","$nhypcpuid
+		fi
+		if [ -z "${hyp_mapping[${hyp_sockid}]}" ]; then
+			let "hypsocket_cnt=$hypsocket_cnt+1"
+			hyp_mapping[${hyp_sockid}]=$hypcpuid
+		else
+			hyp_mapping[${hyp_sockid}]+=","$hypcpuid
+		fi
+	fi
+done < "$input"
+
+
+let "node_cnt=$node_cnt-1"
+let "socket_cnt=$socket_cnt-1"
+let "core_cnt=$core_cnt-1"
+let "nhypsocket_cnt=$nhypsocket_cnt-1"
+let "hypsocket_cnt=$hypsocket_cnt-1"
+for index_in in `seq 0 $node_cnt`
+do
+	echo NODE$index_in: ${node_mapping[${index_in}]}
+done
+
+for index_in in `seq 0 $socket_cnt`
+do
+	echo SOCKET$index_in: ${socket_mapping[${index_in}]}
+done
+
+for index_in in `seq 0 $nhypsocket_cnt`
+do
+	echo NHYPSOCKET$index_in: ${nhyp_mapping[${index_in}]}
+done
+
+for index_in in `seq 0 $hypsocket_cnt`
+do
+	echo HYPSOCKET$index_in: ${hyp_mapping[${index_in}]}
+done
+
+for index_in in `seq 0 $core_cnt`
+do
+	echo CORE$index_in: ${coreid_mapping[${index_in}]}
+done

@@ -1,0 +1,259 @@
+#!/bin/bash
+#
+#                         License
+#
+# Copyright (C) 2021  David Valin dvalin@redhat.com
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+# This script automates the execution of linpack.  It will determine the
+# set of default run parameters based on the system configuration.
+#
+test_name="linpack"
+arguments="$@"
+chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
+run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+
+setup_done=0
+out_file=""
+interleave="all"
+use_pbench_version=0
+show_usage=0
+
+#
+# Clone the repo that contains the common code and tools
+#
+tools_git=https://github.com/dvalinrh/test_tools
+
+found=0
+for arg in "$@"; do
+	if [ $found -eq 1 ]; then
+		tools_git=$arg
+		found=0
+	fi
+	if [[ $arg == "--tools_git" ]]; then
+		found=1
+	fi
+
+	#
+	# We do the usage check here, as we do not want to be calling
+	# the common parsers then checking for usage here.  Doing so will
+	# result in the script exiting with out giving the test options.
+	#
+	if [[ $arg == "--usage" ]]; then
+		show_usage=1
+	fi
+done
+
+#
+# Check to see if the test tools directory exists.  If it does, we do not need to
+# clone the repo.
+#
+if [ ! -d "test_tools" ]; then
+        git clone $tools_git
+        if [ $? -ne 0 ]; then
+                echo pulling git $tools_git failed.
+                exit
+        fi
+fi
+
+if [ $show_usage -eq 1 ]; then
+	echo "$1 Usage:"
+	echo "  --interleave: numactl interleave option"
+	echo "  --use_pbench_version: Instead of running the wrappers version"
+	echo "    of linpack, use pbench-linpack when pbench is requested"
+	source test_tools/general_setup --usage
+	exit 0
+fi
+
+
+#
+# Variables set by general setup.
+#
+# TOOLS_BIN: points to the tool directory
+# to_home_root: home directory
+# to_configuration: configuration information
+# to_times_to_run: number of times to run the test
+# to_pbench: Run the test via pbench
+# to_pbench_copy: Copy the data to the pbench repository, not move_it.
+# to_puser: User running pbench
+# to_run_label: Label for the run
+# to_user: User on the test system running the test
+# to_sys_type: for results info, basically aws, azure or local
+# to_sysname: name of the system
+# to_tuned_setting: tuned setting
+#
+
+source test_tools/general_setup "$@"
+
+copy_pbench_data()
+{
+	value=`$TOOLS_BIN/set_pbench_variables --host_config $to_configuration --sys_type $to_sys_type --test ${test_name} --pbench_user $to_puser --run_label $to_run_label`
+	results_prefix=`echo $value | cut -d: -f 2`
+
+	echo $TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy >> /tmp/debugging
+	$TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy
+}
+
+execute_via_pbench()
+{
+	if [ $use_pbench_version -eq 1 ]; then
+		#
+		# Run original pbench-linpack
+		#
+		yum install -y pbench-linpack.x86_64
+		echo "pbench-linpack --config ${to_configuration}_${to_tuned_setting}_iteration_${iteration}"
+		pbench-linpack --config ${to_configuration}_${to_tuned_setting}_iteration_${iteration} 
+		#
+		# We do not have enough control of where pbench-linpack puts the results in pbench
+		# to match things if we ran without.  So remove the results and then do the copying by
+		# hand.
+		pushd /var/lib/pbench-agent
+		rm `ls -rt lin*copied | head -1`
+		popd
+	else
+		 $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11
+	fi
+}
+
+execute_via_shell()
+{
+	if [ $setup_done -eq 0 ]; then
+		cp $run_dir/linpack_extra/* $run_dir/linpack
+		file=`/$to_home_root/$to_user/tools_bin/get_params_file -d /$to_home_root/$to_user -t ${test_name} -c ${to_sysname}`
+		if test -f "$file"; then
+			cp $file $run_dir/${test_name}/linpack.dat
+		fi
+		rm -rf $run_dir/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+		mkdir $run_dir/${test_name}/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+		rm  /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+		setup_done=1
+	fi
+	file=`/$to_home_root/$to_user/tools_bin/get_params_file -d /$to_home_root/$to_user -t ${test_name} -c ${to_sysname}`
+	if test -f "$file"; then
+		while IFS= read -r linpack_ops
+		do
+			options=`echo "${linpack_ops}" | cut -d':' -f 2`
+			test_config=`echo "${linpack_ops}" | cut -d':' -f 1`
+			config="${to_configuration}_${test_config}"
+			cd $run_dir/${test_name}
+			echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
+			./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+		done  < "$file"
+	else
+		cd $run_dir/${test_name}
+		echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
+		./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+	fi
+}
+
+# Define options
+#
+ARGUMENT_LIST=(
+	"interleave"
+)
+
+NO_ARGUMENTS=(
+	"use_pbench_version"
+)
+
+# read arguments
+opts=$(getopt \
+    --longoptions "$(printf "%s:," "${ARGUMENT_LIST[@]}")" \
+    --longoptions "$(printf "%s," "${NO_ARGUMENTS[@]}")" \
+    --name "$(basename "$0")" \
+    --options "h" \
+    -- "$@"
+)
+
+#
+# Report any errors
+#
+if [ $? -ne 0 ]; then
+	exit
+fi
+
+eval set --$opts
+
+while [[ $# -gt 0 ]]; do
+        case "$1" in
+		--interleave)
+			interleave=${2}
+			shift 2
+		;;
+		--use_pbench_version)
+			use_pbench_version=1
+			shift 1
+		;;
+		-h)
+			echo future usage message		
+			exit
+		;;
+		--)
+			break; 
+		;;
+		*)
+			echo option not found $1
+			exit
+		;;
+        esac
+done
+
+for iteration in  `seq 1 1 $to_times_to_run`
+do
+	out_file=/tmp/${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_iteration_$iteration.out
+	if [ $to_pbench -eq 1 ]; then
+		execute_via_pbench
+	else
+		execute_via_shell
+	fi
+done
+
+#
+# Process the data.
+#
+if [ $use_pbench_version -eq 1 ]; then
+	results_prefix=$to_puser"_instance_"$to_configuration
+
+	dir=`ls -rtd /var/lib/pbench-agent/linpack_* | tail -1`
+	cd $dir
+	mkdir /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+	for i  in `ls -d *threads`
+	do
+		mkdir /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i
+		cd $i
+		for j in `ls -d  sample*`
+		do
+			mkdir /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i/$j
+			cp $j/result.txt /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i/$j
+		done
+		cd ..
+	done
+	cd /tmp
+	tar cf results_pbench_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+
+	copy_pbench_data
+else
+	if [ $to_pbench -eq 0 ]; then
+		cd /tmp
+		RESULTSDIR=results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_$(date "+%Y.%m.%d-%H.%M.%S")
+		mv  $run_dir/${test_name}/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave} $RESULTSDIR
+		rm results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+		ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+		mv  ${test_name}_*.out ${RESULTSDIR}
+		tar hcf results_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+		cp  results_${test_name}_${to_tuned_setting}.tar results_pbench_${test_name}_${to_tuned_setting}.tar
+	fi
+fi
