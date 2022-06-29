@@ -268,8 +268,8 @@ else
 	if [ $to_pbench -eq 0 ]; then
 		cd /tmp
 		RESULTSDIR=results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_$(date "+%Y.%m.%d-%H.%M.%S")
-		cd ${curdir}/meta_data.yml ${RESULTSDIR}
 		mv  $run_dir/${test_name}/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave} $RESULTSDIR
+		cp ${curdir}/meta_data.yml ${RESULTSDIR}
 		rm results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		mv  ${test_name}_*.out ${RESULTSDIR}
