@@ -24,13 +24,13 @@
 test_name="linpack"
 arguments="$@"
 
+curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
 		run_dir=`pwd`
 	else
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
-		curdir=`pwd`
 		run_dir="${curdir}${run_dir}"
 	fi
 else
@@ -136,7 +136,8 @@ execute_via_pbench()
 		rm `ls -rt lin*copied | head -1`
 		popd
 	else
-		 $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
+		cd $curdir
+		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
 	fi
 }
 
@@ -267,6 +268,7 @@ else
 	if [ $to_pbench -eq 0 ]; then
 		cd /tmp
 		RESULTSDIR=results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_$(date "+%Y.%m.%d-%H.%M.%S")
+		cd ${curdir}/meta_data.yml ${RESULTSDIR}
 		mv  $run_dir/${test_name}/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave} $RESULTSDIR
 		rm results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
