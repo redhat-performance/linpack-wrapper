@@ -18,6 +18,7 @@ GOMP_CPU_AFFINITY=""
 NUMB_SOCKETS=""
 reduce_only=0
 
+
 execute_hyper()
 {
 	nh_threads=0
@@ -133,8 +134,13 @@ execute_non_hyper()
 process_summary()
 {
 	pwd
+	test_results="Failed"
 	rdir=`ls -d results_linpack_* | grep -v tar | tail -1`
 	pushd $rdir
+	#
+	# We will over write this
+	#
+	echo Failed > test_results_report
 	ls | cut -d'.' -f1-5 | sort -u > /tmp/linpack_temp
 	iters=0
 	input="/tmp/linpack_temp"
@@ -154,6 +160,7 @@ process_summary()
 		hyper_setting=`echo $lin_file | cut -d'_' -f7-10 | cut -d'.' -f 1`
 		have_cpus=0
 		cpu_affin="None"
+		avg=""
 		while IFS= read -r res_file
 		do
 			input2=$res_file
@@ -182,8 +189,12 @@ process_summary()
 				avg=`echo $sum / $iters | bc`
 			fi
 		done < "$input1"
+		if [[ $avg  != "" ]]; then
+			test_results="Ran"
+		fi
 		echo $hyper_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results_${test_name}.csv
 	done < "$input"
+	echo $test_results > test_results_report
 	popd
 }
 
