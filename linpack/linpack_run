@@ -22,6 +22,15 @@
 # set of default run parameters based on the system configuration.
 #
 test_name="linpack"
+if [ ! -f "/tmp/${test_name}.out" ]; then
+        command="${0} $@"
+        echo $command
+        $command &> /tmp/${test_name}.out
+        cat /tmp/${test_name}.out
+        rm /tmp/${test_name}.out
+        exit
+fi
+
 arguments="$@"
 
 curdir=`pwd`
@@ -273,6 +282,7 @@ else
 		rm results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		mv  ${test_name}_*.out ${RESULTSDIR}
+		mv /tmp/${test_name}.out ${RESULTSDIR}
 		tar hcf results_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		cp  results_${test_name}_${to_tuned_setting}.tar results_pbench_${test_name}_${to_tuned_setting}.tar
 	fi
