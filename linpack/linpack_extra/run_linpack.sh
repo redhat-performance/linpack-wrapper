@@ -191,8 +191,8 @@ process_summary()
 		done < "$input1"
 		if [[ $avg  != "" ]]; then
 			test_results="Ran"
+			echo $hyper_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results_${test_name}.csv
 		fi
-		echo $hyper_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results_${test_name}.csv
 	done < "$input"
 	echo $test_results > test_results_report
 	popd
