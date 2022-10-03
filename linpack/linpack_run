@@ -279,9 +279,9 @@ else
 		cd /tmp
 		RESULTSDIR=results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_$(date "+%Y.%m.%d-%H.%M.%S")
 		mv  $run_dir/${test_name}/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave} $RESULTSDIR
-		${curdir}/test_tools/move_data $curdir $RESULTS_DIR
 		rm results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
+		${curdir}/test_tools/move_data $curdir $RESULTSDIR
 		mv  ${test_name}_*.out ${RESULTSDIR}
 		mv /tmp/${test_name}.out ${RESULTSDIR}
 		rm -f results_pbench.tar
