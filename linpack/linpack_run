@@ -117,7 +117,7 @@ fi
 # to_tuned_setting: tuned setting
 #
 
-{curdir}/test_tools/gather_data ${curdir}
+${curdir}/test_tools/gather_data ${curdir}
 source test_tools/general_setup "$@"
 
 copy_pbench_data()
