@@ -285,7 +285,9 @@ else
 		mv  ${test_name}_*.out ${RESULTSDIR}
 		mv /tmp/${test_name}.out ${RESULTSDIR}
 		rm -f results_pbench.tar
-		find $results_dir  -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin 
+		working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
+
+		find $working_dir  -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin 
 		tar -L hcf results_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		cp  results_${test_name}_${to_tuned_setting}.tar results_pbench_${test_name}_${to_tuned_setting}.tar
 	fi
