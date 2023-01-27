@@ -234,7 +234,7 @@ while [[ $# -gt 0 ]]; do
         esac
 done
 
-cp ${to_home_root}/${to_user}/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
+cp ${curdir}/uploads/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
 if [ $? -ne 0 ]; then
 	echo Error, did not find xlinpack_xeon64-NEW
 fi
