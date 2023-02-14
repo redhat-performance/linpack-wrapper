@@ -234,7 +234,7 @@ while [[ $# -gt 0 ]]; do
         esac
 done
 
-cp ${to_home_root}/${to_user}/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
+cp ${curdir}/uploads/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
 if [ $? -ne 0 ]; then
 	echo Error, did not find xlinpack_xeon64-NEW
 fi
@@ -288,7 +288,6 @@ else
 		working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
 
 		find $working_dir  -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin 
-		tar -L hcf results_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
-		cp  results_${test_name}_${to_tuned_setting}.tar results_pbench_${test_name}_${to_tuned_setting}.tar
+		ln -s results_pbench.tar results_${test_name}_${to_tuned_setting}.tar
 	fi
 fi
