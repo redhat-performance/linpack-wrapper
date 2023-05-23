@@ -21,14 +21,31 @@
 # This script automates the execution of linpack.  It will determine the
 # set of default run parameters based on the system configuration.
 #
+error_exit()
+{
+	echo $1
+	exit $2
+}
+
+usage()
+{
+	echo "$1 Usage:"
+	echo "  --interleave: numactl interleave option"
+	echo "  --use_pbench_version: Instead of running the wrappers version"
+	echo "    of linpack, use pbench-linpack when pbench is requested"
+	source test_tools/general_setup --usage
+	exit 1
+}
+
 test_name="linpack"
 if [ ! -f "/tmp/${test_name}.out" ]; then
         command="${0} $@"
         echo $command
         $command &> /tmp/${test_name}.out
+	rtc=$?
         cat /tmp/${test_name}.out
         rm /tmp/${test_name}.out
-        exit
+        exit $rtc
 fi
 
 arguments="$@"
@@ -85,18 +102,12 @@ done
 if [ ! -d "test_tools" ]; then
         git clone $tools_git test_tools
         if [ $? -ne 0 ]; then
-                echo pulling git $tools_git failed.
-                exit
+                error_exit "pulling git $tools_git failed." 1
         fi
 fi
 
 if [ $show_usage -eq 1 ]; then
-	echo "$1 Usage:"
-	echo "  --interleave: numactl interleave option"
-	echo "  --use_pbench_version: Instead of running the wrappers version"
-	echo "    of linpack, use pbench-linpack when pbench is requested"
-	source test_tools/general_setup --usage
-	exit 0
+	usage $1
 fi
 
 
@@ -127,6 +138,7 @@ copy_pbench_data()
 
 	echo $TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy >> /tmp/debugging
 	$TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy
+	# Catch error here.
 }
 
 execute_via_pbench()
@@ -136,8 +148,14 @@ execute_via_pbench()
 		# Run original pbench-linpack
 		#
 		yum install -y pbench-linpack.x86_64
+		if [ $? -ne 0 ]; then
+			error_exit "yum install of pbench-linpack.x86_64 failed" 1
+		fi
 		echo "pbench-linpack --config ${to_configuration}_${to_tuned_setting}_iteration_${iteration}"
 		pbench-linpack --config ${to_configuration}_${to_tuned_setting}_iteration_${iteration} 
+		if [ $? -ne 0 ]; then
+			error_exit "pbench-linpack execution failed" 1
+		fi
 		#
 		# We do not have enough control of where pbench-linpack puts the results in pbench
 		# to match things if we ran without.  So remove the results and then do the copying by
@@ -148,6 +166,9 @@ execute_via_pbench()
 	else
 		cd $curdir
 		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
+		if [ $? -ne 0 ]; then
+			error_exit "executing linpack via pbench failed" 1
+		fi
 	fi
 }
 
@@ -174,11 +195,17 @@ execute_via_shell()
 			cd $run_dir/${test_name}
 			echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
 			./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+			if [ $? -ne 0 ]; then
+				error_exit "run_linpack.sh failed" 1
+			fi
 		done  < "$file"
 	else
 		cd $run_dir/${test_name}
 		echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
 		./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+		if [ $? -ne 0 ]; then
+			error_exit "run_linpack.sh failed" 1
+		fi
 	fi
 }
 
@@ -205,7 +232,7 @@ opts=$(getopt \
 # Report any errors
 #
 if [ $? -ne 0 ]; then
-	exit
+	usage $1
 fi
 
 eval set --$opts
@@ -221,22 +248,20 @@ while [[ $# -gt 0 ]]; do
 			shift 1
 		;;
 		-h)
-			echo future usage message		
-			exit
+			usage
 		;;
 		--)
 			break; 
 		;;
 		*)
-			echo option not found $1
-			exit
+			error_exit "option not found $1" 1
 		;;
         esac
 done
 
 cp ${curdir}/uploads/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
 if [ $? -ne 0 ]; then
-	echo Error, did not find xlinpack_xeon64-NEW
+	error_exit "Error, did not find xlinpack_xeon64-NEW" 1
 fi
 chmod 755 ${run_dir}/linpack/xlinpack_xeon64
 
@@ -274,6 +299,7 @@ if [ $use_pbench_version -eq 1 ]; then
 	tar cf results_pbench_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 
 	copy_pbench_data
+	# error handling here also
 else
 	if [ $to_pbench -eq 0 ]; then
 		cd /tmp
