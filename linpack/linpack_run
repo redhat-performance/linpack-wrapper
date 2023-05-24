@@ -107,7 +107,7 @@ if [ ! -d "test_tools" ]; then
 fi
 
 if [ $show_usage -eq 1 ]; then
-	usage $1
+	usage $test_name
 fi
 
 
@@ -138,7 +138,6 @@ copy_pbench_data()
 
 	echo $TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy >> /tmp/debugging
 	$TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy
-	# Catch error here.
 }
 
 execute_via_pbench()
@@ -232,7 +231,7 @@ opts=$(getopt \
 # Report any errors
 #
 if [ $? -ne 0 ]; then
-	usage $1
+	usage $test_name
 fi
 
 eval set --$opts
@@ -248,7 +247,7 @@ while [[ $# -gt 0 ]]; do
 			shift 1
 		;;
 		-h)
-			usage
+			usage $test_name
 		;;
 		--)
 			break; 
@@ -302,7 +301,6 @@ if [ $use_pbench_version -eq 1 ]; then
 	tar cf results_pbench_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 
 	copy_pbench_data
-	# error handling here also
 else
 	if [ $to_pbench -eq 0 ]; then
 		cd /tmp
