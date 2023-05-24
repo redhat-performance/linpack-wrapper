@@ -259,6 +259,9 @@ while [[ $# -gt 0 ]]; do
         esac
 done
 
+if [ ! -f $run_dir/linpack ]; then
+	mkdir $run_dir/linpack
+fi
 cp ${curdir}/uploads/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
 if [ $? -ne 0 ]; then
 	error_exit "Error, did not find xlinpack_xeon64-NEW" 1
@@ -317,3 +320,4 @@ else
 		ln -s results_pbench.tar results_${test_name}_${to_tuned_setting}.tar
 	fi
 fi
+exit 0

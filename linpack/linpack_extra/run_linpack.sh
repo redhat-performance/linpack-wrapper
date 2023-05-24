@@ -16,7 +16,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-
 max_threads=0
 threads_to_do=0
 iterations=5
@@ -35,6 +34,11 @@ GOMP_CPU_AFFINITY=""
 NUMB_SOCKETS=""
 reduce_only=0
 
+exit_out()
+{
+	echo $1
+	exit $2
+}
 
 execute_hyper()
 {
@@ -225,6 +229,9 @@ execute_linpack()
 		echo CPU Affinity: $GOMP_CPU_AFFINITY > $out_file
 		echo ./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
 		./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
+		if [ $? -ne 0 ]; then
+			exit_out "linpack execution failed 1" 1
+		fi
 	done
 }
 
@@ -239,7 +246,7 @@ usage()
 	echo "  -n: numactl interleave"
 	echo "  -s: sanity run"
 	echo "  -t: max threads: maximum number of threads"
-	exit
+	exit 1
 }
 
 show_config=0
@@ -294,22 +301,22 @@ if [ $reduce_only -eq 1 ]; then
 	pushd /tmp
 	process_summary
 	popd
-	exit
+	exit 0
 fi
 
 PREFIX=test
-./get_hw_config > /tmp/hw_config
-NUMB_CPUS=`grep "numb_cpus:" /tmp/hw_config | cut -d: -f 2`
-CORES_PER_SOCKET=`grep "cores_per_socket" /tmp/hw_config | cut -d: -f 2`
-THREADS_PER_CORE=`grep "threads_per_core" /tmp/hw_config | cut -d: -f 2`
-export NUMB_SOCKETS=`grep "numb_sockets" /tmp/hw_config | cut -d: -f 2`
+./core_info > /tmp/core_info
+NUMB_CPUS=`grep "numb_cpus:" /tmp/core_info | cut -d: -f 2`
+CORES_PER_SOCKET=`grep "cores_per_socket" /tmp/core_info | cut -d: -f 2`
+THREADS_PER_CORE=`grep "threads_per_core" /tmp/core_info | cut -d: -f 2`
+export NUMB_SOCKETS=`grep "numb_sockets" /tmp/core_info | cut -d: -f 2`
 
 echo THREADS_PER_CORE $THREADS_PER_CORE
 
 # Hypertheads
-grep "^HYPSOCKET" /tmp/hw_config > /tmp/hyperthreads
+grep "^HYPSOCKET" /tmp/core_info > /tmp/hyperthreads
 # Non hyperthreads
-grep "^NHYPSOCKET" /tmp/hw_config > /tmp/nhyperthreads
+grep "^NHYPSOCKET" /tmp/core_info > /tmp/nhyperthreads
 
 #
 # Set up the core pairings
@@ -327,7 +334,7 @@ if [ $hypcnt -eq 0 ]; then
 	echo No hyper threads
 	rm /tmp/cpus_in_sock 2> /dev/null
 
-	grep "^SOCKET" /tmp/hw_config | cut -d ' ' -f2 > /tmp/socket_info
+	grep "^SOCKET" /tmp/core_info | cut -d ' ' -f2 > /tmp/socket_info
 	cpus_in_sock=`cat /tmp/socket_info`
 	for cpus in $cpus_in_sock; do
 		echo "$cpus"
@@ -374,7 +381,7 @@ if [ $show_config -gt 0 ]; then
 			echo socket: $socket: ${cpus_in_sock[$socket]}
 		done
 	fi
-	exit
+	exit 0
 fi
 
 
@@ -387,3 +394,4 @@ else
 fi
 
 process_summary
+exit 0

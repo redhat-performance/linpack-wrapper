@@ -17,7 +17,9 @@ export OMP_NUM_THREADS=$threads
 uname -v | grep Ubuntu > /dev/null
 if [ $? -eq 0 ]; then
 	./xlinpack_xeon64 < ./linpack.dat
+	exit $?
 else
 	numactl --interleave=${interleave} ./xlinpack_xeon64 < ./linpack.dat
+	echo $?
 fi
 
