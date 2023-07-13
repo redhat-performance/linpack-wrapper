@@ -4,8 +4,6 @@ Description:
          The Linpack Benchmark is a measure of a computer's floating-point rate of execution.
          It is determined by running a computer program that solves a dense system of linear
          equations.
-         for all Python implementations. The focus is on real-world benchmarks, rather than synthetic
-         benchmarks, using whole applications when possible.
 
 Location of useful documentation: https://www.netlib.org/utk/people/JackDongarra/faq-linpack.html
 Location of underlying workload: Requires the licensed linpack kit.
