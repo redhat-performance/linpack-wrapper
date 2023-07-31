@@ -51,7 +51,6 @@ fi
 arguments="$@"
 
 curdir=`pwd`
-
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
@@ -60,15 +59,9 @@ if [[ $0 == "./"* ]]; then
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
 		run_dir="${curdir}${run_dir}"
 	fi
-elif [[ $0 != "/"* ]]; then
-	dir=`echo $0 | rev | cut -d'/' -f2- | rev`
-	run_dir="${curdir}/${dir}"
 else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
-	if [[ $run_dir != "/"* ]]; then
-		run_dir=${curdir}/${run_dir}
-	fi
 fi
 
 setup_done=0
@@ -178,19 +171,83 @@ execute_via_pbench()
 	fi
 }
 
+reduce_data()
+{
+	start=0
+	total=0
+	entries=0
+	max=0
+	cur_size=0
+	sub_value=0
+	sub_count=0
+	rfile="/tmp/linpack_results.csv"
+	echo $rfile >> /tmp/dave
+	echo "Array Size:GFlops" > $rfile
+	echo "Array Size:GFlops" >> /tmp/dave
+	while IFS= read -r line
+	do
+		if [ $start -eq 1 ]; then
+			if [[ $line == "Done:"* ]]; then
+				break
+			fi
+			size=`echo $line | awk '{print $1}'`
+			if [ $cur_size -eq 0 ]; then
+				cur_size=$size
+			fi
+			value=`echo $line | awk '{print $5}' | cut -d. -f1`
+			if [ $cur_size -eq $size ]; then
+				let "sub_value=$sub_value+value"
+				let "sub_count=$sub_count+1"
+			else
+				sub_average=`echo $sub_value/$sub_count | bc`
+				sub_value=$value
+				sub_count=1
+				echo $size:$sub_average >> $rfile
+				echo $size:$sub_average >> /tmp/dave
+				cur_size=$size
+			fi
+			let "entries=$entries+1"
+			let "total=$total+$value"
+			if [ $value -gt $max ]; then
+				max=$value
+			fi
+		fi
+		if [[ $line == "Size"* ]]; then
+			start=1
+		fi
+	done < "${1}"
+	average=`echo $total/$entries | bc`
+	echo Average: $average >> /tmp/dave
+	echo Average: $average >> $rfile
+	echo Max: $max >> $rfile
+	echo Max: $max >> /tmp/dave
+}
+
 execute_via_shell()
 {
 	if [ $setup_done -eq 0 ]; then
 		cp $run_dir/linpack_extra/* $run_dir/linpack
 		file=`/$to_home_root/$to_user/tools_bin/get_params_file -d /$to_home_root/$to_user -t ${test_name} -c ${to_sysname}`
-		if test -f "$file"; then
-			cp $file $run_dir/${test_name}/linpack.dat
-		fi
+#		if test -f "$file"; then
+#			cp $file $run_dir/${test_name}/linpack.dat
+#		fi
 		rm -rf $run_dir/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		mkdir $run_dir/${test_name}/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		rm  /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		setup_done=1
 	fi
+	echo ./runme_xeon64
+	./runme_xeon64 >> $out_file
+	if [ $? -ne 0 ]; then
+		error_exit "runme_xeon64 failed" 1
+	fi
+	pwd > /tmp/dave
+	echo $out_file >> /tmp/dave
+	reduce_data $out_file
+}
+
+recover()
+{
 	file=`/$to_home_root/$to_user/tools_bin/get_params_file -d /$to_home_root/$to_user -t ${test_name} -c ${to_sysname}`
 	if test -f "$file"; then
 		while IFS= read -r linpack_ops
@@ -206,13 +263,14 @@ execute_via_shell()
 			fi
 		done  < "$file"
 	else
-		cd $run_dir/${test_name}
-		echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
-		./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+		echo ./runme_xeon64
+		./runme_xeon64 >> $out_file
 		if [ $? -ne 0 ]; then
-			error_exit "run_linpack.sh failed" 1
+			error_exit "runme_xeon64 failed" 1
 		fi
+		reduce_data $out_file
 	fi
+
 }
 
 # Define options
@@ -268,12 +326,14 @@ done
 if [ ! -f $run_dir/linpack ]; then
 	mkdir $run_dir/linpack
 fi
-cp ${curdir}/uploads/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
+#cp ${curdir}/uploads/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
+tar xf ${curdir}/uploads/l_onemklbench_p_2023.2.0_49340.tgz
 if [ $? -ne 0 ]; then
-	error_exit "Error, did not find xlinpack_xeon64-NEW" 1
+	error_exit "Error, tar xf ${curdir}/uploads/l_onemklbench_p_2023.2.0_49340.tgz failed"
 fi
-chmod 755 ${run_dir}/linpack/xlinpack_xeon64
+#chmod 755 ${run_dir}/linpack/xlinpack_xeon64
 
+pushd benchmarks_2023.2.0/linux/mkl/benchmarks/linpack > /dev/null
 for iteration in  `seq 1 1 $to_times_to_run`
 do
 	out_file=/tmp/${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_iteration_$iteration.out
@@ -283,6 +343,7 @@ do
 		execute_via_shell
 	fi
 done
+popd > /dev/null
 
 #
 # Process the data.
@@ -316,6 +377,8 @@ else
 		rm results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
 		${curdir}/test_tools/move_data $curdir $RESULTSDIR
+		echo "cp ~/linpack_results.csv ${RESULTSDIR}" >> /tmp/dave
+		cp /tmp/linpack_results.csv ${RESULTSDIR}
 		mv  ${test_name}_*.out ${RESULTSDIR}
 		mv /tmp/${test_name}.out ${RESULTSDIR}
 		rm -f results_pbench.tar
