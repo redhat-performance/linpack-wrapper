@@ -310,19 +310,9 @@ if [ $use_pbench_version -eq 1 ]; then
 	copy_pbench_data
 else
 	if [ $to_pbench -eq 0 ]; then
-		cd /tmp
-		RESULTSDIR=results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_$(date "+%Y.%m.%d-%H.%M.%S")
-		mv  $run_dir/${test_name}/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave} $RESULTSDIR
-		rm results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
-		ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
-		${curdir}/test_tools/move_data $curdir $RESULTSDIR
-		mv  ${test_name}_*.out ${RESULTSDIR}
-		mv /tmp/${test_name}.out ${RESULTSDIR}
-		rm -f results_pbench.tar
-		working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
+		echo curdir $curdir >> /tmp/dvalin_linpack
+		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results_linpack.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files linpack_results/test_results_report
 
-		find $working_dir  -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin 
-		ln -s results_pbench.tar results_${test_name}_${to_tuned_setting}.tar
 	fi
 fi
 exit 0
