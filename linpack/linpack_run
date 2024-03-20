@@ -274,6 +274,9 @@ if [ $? -ne 0 ]; then
 fi
 chmod 755 ${run_dir}/linpack/xlinpack_xeon64
 
+# Gather hardware information
+${curdir}/test_tools/gather_data ${curdir}
+
 for iteration in  `seq 1 1 $to_times_to_run`
 do
 	out_file=/tmp/${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_iteration_$iteration.out
