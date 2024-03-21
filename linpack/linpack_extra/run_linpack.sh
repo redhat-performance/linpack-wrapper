@@ -34,11 +34,11 @@ GOMP_CPU_AFFINITY=""
 NUMB_SOCKETS=""
 reduce_only=0
 
-if [[ -d linpack_results ]]; then
-	rm -rf linpack_results
-fi
-mkdir linpack_results
 out_dir=`pwd`/linpack_results
+if [[ -d $out_dir ]]; then
+	rm -rf $out_dir
+fi
+mkdir $out_dir
 
 exit_out()
 {
