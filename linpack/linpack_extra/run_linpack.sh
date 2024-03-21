@@ -34,6 +34,12 @@ GOMP_CPU_AFFINITY=""
 NUMB_SOCKETS=""
 reduce_only=0
 
+out_dir=`pwd`/linpack_results
+if [[ -d "$out_dir" ]]; then
+	rm -rf $out_dir
+fi
+mkdir $out_dir
+
 exit_out()
 {
 	echo $1
@@ -215,7 +221,9 @@ process_summary()
 			echo $hyper_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results_${test_name}.csv
 		fi
 	done < "$input"
+
 	echo $test_results > test_results_report
+	cp results_${test_name}.csv test_results_report $out_dir
 	popd
 }
 
