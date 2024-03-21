@@ -35,7 +35,7 @@ NUMB_SOCKETS=""
 reduce_only=0
 
 out_dir=`pwd`/linpack_results
-if [[ -d $out_dir ]]; then
+if [[ -d "$out_dir" ]]; then
 	rm -rf $out_dir
 fi
 mkdir $out_dir
