@@ -74,7 +74,7 @@ execute_hyper()
 	total_threads=0
 	socket_index=0
 
-	rm /tmp/socket_mappings 2> /dev/null
+	rm -f /tmp/socket_mappings 2> /dev/null
 	grep "^HYPSOCKET" /tmp/hyperthreads  | cut -d ':' -f1 > /tmp/socket_info
 	hcpus=`cat /tmp/socket_info`
 	for cpus in $hcpus; do
@@ -340,7 +340,7 @@ hypcnt=`wc -l /tmp/hyperthreads | cut -d' ' -f 1`
 index=0
 if [ $hypcnt -eq 0 ]; then
 	echo No hyper threads
-	rm /tmp/cpus_in_sock 2> /dev/null
+	rm -f /tmp/cpus_in_sock 2> /dev/null
 
 	grep "^SOCKET" /tmp/core_info | cut -d ' ' -f2 > /tmp/socket_info
 	cpus_in_sock=`cat /tmp/socket_info`
@@ -394,7 +394,9 @@ fi
 
 
 threads_to_do_per_socket=$threads_to_do
-mkdir results_linpack_${tuned_config}_numa_interleave_${interleave}
+if [[ ! -d results_linpack_${tuned_config}_numa_interleave_${interleave} ]]; then
+	mkdir results_linpack_${tuned_config}_numa_interleave_${interleave}
+fi
 if [ $hypcnt -eq 0 ]; then
 	execute_non_hyper
 else
