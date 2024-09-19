@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+TOOLS_BIN="/"
 max_threads=0
 threads_to_do=0
 iterations=5
@@ -33,6 +34,8 @@ cpus_in_sock=""
 GOMP_CPU_AFFINITY=""
 NUMB_SOCKETS=""
 reduce_only=0
+test_name="linpack"
+test_version="1.0"
 
 out_dir=`pwd`/linpack_results
 if [[ -d "$out_dir" ]]; then
@@ -171,9 +174,9 @@ process_summary()
 	ls | cut -d'.' -f1-5 | sort -u > /tmp/linpack_temp
 	iters=0
 	input="/tmp/linpack_temp"
-	test_name="linpack"
 
-	echo hyper_config:sockets:threads:unit:"MB/sec:cpu_affin" > results_${test_name}.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file results_${test_name}.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
+	echo hyper_config:sockets:threads:unit:"MB/sec:cpu_affin" >> results_${test_name}.csv
 
 	while IFS= read -r lin_file
 	do
@@ -253,13 +256,14 @@ usage()
 	echo "  -i: value: number of iterationsto run"
 	echo "  -n: numactl interleave"
 	echo "  -s: sanity run"
+	echo "  -T: Tools bin to find test_header_info in"
 	echo "  -t: max threads: maximum number of threads"
 	exit 1
 }
 
 show_config=0
 
-while getopts "RC:ci:t:h:P:s:u:oS:n:" opt; do
+while getopts "RC:ci:t:h:P:s:u:oS:n:T:" opt; do
 	case ${opt} in
 		C)
 			config=${OPTARG}
@@ -284,6 +288,9 @@ while getopts "RC:ci:t:h:P:s:u:oS:n:" opt; do
 		;;
 		R)
 			reduce_only=1
+		;;
+		T)
+			TOOLS_BIN=${OPTARG}
 		;;
 		t)
 			threads_list=${OPTARG}
