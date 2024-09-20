@@ -201,16 +201,16 @@ execute_via_shell()
 			test_config=`echo "${linpack_ops}" | cut -d':' -f 1`
 			config="${to_configuration}_${test_config}"
 			cd $run_dir/${test_name}
-			echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
-			./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+			echo ./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
+			./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 			if [ $? -ne 0 ]; then
 				error_exit "run_linpack.sh failed" 1
 			fi
 		done  < "$file"
 	else
 		cd $run_dir/${test_name}
-		echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
-		./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+		echo ./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
+		./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 		if [ $? -ne 0 ]; then
 			error_exit "run_linpack.sh failed" 1
 		fi
@@ -279,6 +279,7 @@ chmod 755 ${run_dir}/linpack/xlinpack_xeon64
 # Gather hardware information
 ${curdir}/test_tools/gather_data ${curdir}
 
+rm -rf $run_dir/linpack/linpack_results  $run_dir/linpack/results*
 for iteration in  `seq 1 1 $to_times_to_run`
 do
 	out_file=/tmp/${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_iteration_$iteration.out
