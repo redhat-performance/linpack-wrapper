@@ -171,23 +171,25 @@ process_summary()
 	# We will over write this
 	#
 	echo Failed > test_results_report
+#	ls | rev | cut -d'_' -f1-14 | rev > /tmp/linpack_temp
 	ls | cut -d'.' -f1-5 | sort -u > /tmp/linpack_temp
 	iters=0
 	input="/tmp/linpack_temp"
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results_${test_name}.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
-	echo hyper_config:sockets:threads:unit:"MB/sec:cpu_affin" >> results_${test_name}.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
+	echo hyper_config:sockets:threads:unit:"MB/sec:cpu_affin" >> results.csv
 
 	while IFS= read -r lin_file
 	do
 		ls  ${lin_file}* > /tmp/linpack_files_iter
 		input1="/tmp/linpack_files_iter"
+		values=`ls | rev | cut -d'_' -f1-14 | rev`
 		iters=0
 		sum=0
-#linpack.20k.out.test_m5.xlarge_threads_1_sockets_1_hyper_no.iter_1
-		threads=`echo $lin_file | cut -d'_' -f 4`
-		sockets=`echo $lin_file | cut -d'_' -f 6`
-		hyper_setting=`echo $lin_file | cut -d'_' -f7-10 | cut -d'.' -f 1`
+#threads_128_sockets_2_hyper_yes_2_socket_hyp_throughput-performance_numa_interleave_all.iter_1
+		threads=`echo $values | cut -d'_' -f 2`
+		sockets=`echo $values | cut -d'_' -f 4`
+		hyper_setting=`echo $values | cut -d'_' -f5-8`
 		have_cpus=0
 		cpu_affin="None"
 		avg=""
@@ -221,12 +223,12 @@ process_summary()
 		done < "$input1"
 		if [[ $avg  != "" ]]; then
 			test_results="Ran"
-			echo $hyper_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results_${test_name}.csv
+			echo $hyper_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results.csv
 		fi
 	done < "$input"
 
 	echo $test_results > test_results_report
-	cp results_${test_name}.csv test_results_report $out_dir
+	cp * $out_dir
 	popd
 }
 
