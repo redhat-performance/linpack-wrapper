@@ -319,7 +319,7 @@ if [ $use_pbench_version -eq 1 ]; then
 	copy_pbench_data
 else
 	if [ $to_pbench -eq 0 ]; then
-		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results_linpack.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out"
+		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out"
 
 	fi
 fi
