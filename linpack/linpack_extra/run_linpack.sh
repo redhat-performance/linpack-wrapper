@@ -21,9 +21,6 @@ max_threads=0
 threads_to_do=0
 iterations=5
 threads_list=""
-numb_hyper_mappings=0
-cpus_non_hyper=""
-cpus_hyper=""
 config="config_none"
 max_threads_to_run=0
 tuned_config="none"
@@ -49,15 +46,15 @@ exit_out()
 	exit $2
 }
 
-execute_hyper()
+execute_ht()
 {
 	nh_threads=0
 	echo hyper threads
 	echo First run just non hyper threads
 	sockets=1
-	hyper_config="hyper_yes_1_socket_nh"
+	ht_config="ht_yes_1_socket_nh"
 	for cpus in $nhypcpus_in_sock; do
-		# calculate how many threads per non hyper grouping
+		# calculate how many threads per non hyper thread grouping
 		if [ $nh_threads -eq 0 ]; then
 			nh_threads=`grep -o ',' <<<"$cpus" | grep -c .`
 			let "nh_threads=$nh_threads + 1"
@@ -87,7 +84,7 @@ execute_hyper()
 	done
 	socket_mappings=`cat /tmp/socket_mappings`
 	sockets=1
-	hyper_config="hyper_yes_1_socket_hyp"
+	ht_config="ht_yes_1_socket_hyp"
 	for cpu_list in $socket_mappings; do
 		nh_threads=`grep -o ',' <<<"$cpu_list" | grep -c .`
 		let "nh_threads=$nh_threads+1"
@@ -105,7 +102,7 @@ execute_hyper()
 		else
 			let "sockets=$sockets + 1"
 			let "threads_to_do=$threads_to_do_per_socket * $sockets"
-			hyper_config="hyper_yes_${sockets}_socket_hyp"
+			ht_config="ht_yes_${sockets}_socket_hyp"
 			worker1=`echo $cpu_list | cut -d',' -f 1-${threads_to_do}`
 			worker=${worker}","${worker1}
 			GOMP_CPU_AFFINITY=`echo $worker | cut -d',' -f 1-${threads_to_do}`
@@ -116,10 +113,10 @@ execute_hyper()
 	done
 }
 
-execute_non_hyper()
+execute_non_ht()
 {
 	# single socket execution
-	hyper_config="hyper_no"
+	ht_config="hyper_no"
 	echo No hyper threads configured
 	echo All we do is run the whole cores. 
 	max_threads_to_run=$threads_to_do
@@ -171,23 +168,24 @@ process_summary()
 	# We will over write this
 	#
 	echo Failed > test_results_report
+#	ls | rev | cut -d'_' -f1-14 | rev > /tmp/linpack_temp
 	ls | cut -d'.' -f1-5 | sort -u > /tmp/linpack_temp
 	iters=0
 	input="/tmp/linpack_temp"
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results_${test_name}.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
-	echo hyper_config:sockets:threads:unit:"MB/sec:cpu_affin" >> results_${test_name}.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
+	echo ht_config:sockets:threads:unit:"MB/sec:cpu_affin" >> results.csv
 
 	while IFS= read -r lin_file
 	do
 		ls  ${lin_file}* > /tmp/linpack_files_iter
 		input1="/tmp/linpack_files_iter"
+		values=`ls | rev | cut -d'_' -f1-14 | rev`
 		iters=0
 		sum=0
-#linpack.20k.out.test_m5.xlarge_threads_1_sockets_1_hyper_no.iter_1
-		threads=`echo $lin_file | cut -d'_' -f 4`
-		sockets=`echo $lin_file | cut -d'_' -f 6`
-		hyper_setting=`echo $lin_file | cut -d'_' -f7-10 | cut -d'.' -f 1`
+		threads=`echo $values | cut -d'_' -f 2`
+		sockets=`echo $values | cut -d'_' -f 4`
+		ht_setting=`echo $values | cut -d'_' -f5-8`
 		have_cpus=0
 		cpu_affin="None"
 		avg=""
@@ -221,12 +219,12 @@ process_summary()
 		done < "$input1"
 		if [[ $avg  != "" ]]; then
 			test_results="Ran"
-			echo $hyper_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results_${test_name}.csv
+			echo $ht_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results.csv
 		fi
 	done < "$input"
 
 	echo $test_results > test_results_report
-	cp results_${test_name}.csv test_results_report $out_dir
+	cp * $out_dir
 	popd
 }
 
@@ -236,7 +234,7 @@ execute_linpack()
 	echo CPU affinity $GOMP_CPU_AFFINITY
  	for iter in `seq 1 $iterations`
 	do
-		out_file=results_linpack_${tuned_config}_numa_interleave_${interleave}/linpack.out.${PREFIX}_${config}_threads_${OMP_NUM_THREADS}_sockets_${sockets}_${hyper_config}_${tuned_config}_numa_interleave_${interleave}.iter_${iter}
+		out_file=results_linpack_${tuned_config}_numa_interleave_${interleave}/linpack.out.${PREFIX}_${config}_threads_${OMP_NUM_THREADS}_sockets_${sockets}_${ht_config}_${tuned_config}_numa_interleave_${interleave}.iter_${iter}
 		echo CPU Affinity: $GOMP_CPU_AFFINITY > $out_file
 		echo ./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
 		./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
@@ -342,10 +340,10 @@ grep "^NHYPSOCKET" /tmp/core_info > /tmp/nhyperthreads
 # values.
 #
 
-hypcnt=`wc -l /tmp/hyperthreads | cut -d' ' -f 1` 
+ht_cnt=`wc -l /tmp/hyperthreads | cut -d' ' -f 1` 
 
 index=0
-if [ $hypcnt -eq 0 ]; then
+if [ $ht_cnt -eq 0 ]; then
 	echo No hyper threads
 	rm -f /tmp/cpus_in_sock 2> /dev/null
 
@@ -404,10 +402,10 @@ threads_to_do_per_socket=$threads_to_do
 if [[ ! -d results_linpack_${tuned_config}_numa_interleave_${interleave} ]]; then
 	mkdir results_linpack_${tuned_config}_numa_interleave_${interleave}
 fi
-if [ $hypcnt -eq 0 ]; then
-	execute_non_hyper
+if [ $ht_cnt -eq 0 ]; then
+	execute_non_ht
 else
-	execute_hyper
+	execute_ht
 fi
 
 process_summary
