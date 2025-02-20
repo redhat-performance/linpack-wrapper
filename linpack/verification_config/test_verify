@@ -1,0 +1,4 @@
+Required_Systems: intel
+Via_Zathras: No
+fields: ht_config:s,sockets:n,threads:n,unit:s,MB/sec:n,cpu_affin:s
+test:--interleave all --iterations 1:base_test_results/test1

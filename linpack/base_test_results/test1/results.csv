@@ -1,0 +1,15 @@
+# Test general meta start
+# Test: linpack
+# Results version: 1.0
+# Host: None
+# Sys environ: --tuned
+# Tuned: None
+# OS: 5.14.0-503.11.1.el9_5.x86_64
+# Numa nodes: 1
+# CPU family: Intel(R) Xeon(R) Platinum 8175M CPU @ 2.50GHz
+# Number cpus: 4
+# Memory: 15731180kB
+# Test general meta end
+ht_config:sockets:threads:unit:MB/sec:cpu_affin
+ht_yes_1_socket:1:2:GFlops:131:0,1
+ht_yes_1_socket:1:2:GFlops:131:2,3,0,1
