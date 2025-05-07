@@ -1,0 +1,2 @@
+ht_config:sockets:threads:unit:MB/sec:cpu_affin
+ht_yes_1_socket:[[:digit:]]{1,}:[[:digit:]]{1,}:GFlops:[[:digit:]]{1,}:[ 0-9,]{1,}$
