@@ -32,6 +32,7 @@ GOMP_CPU_AFFINITY=""
 NUMB_SOCKETS=""
 reduce_only=0
 test_name="linpack"
+results_file="results_${test_name}.csv"
 test_version="1.0"
 
 out_dir=`pwd`/linpack_results
@@ -173,8 +174,8 @@ process_summary()
 	iters=0
 	input="/tmp/linpack_temp"
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
-	echo ht_config:sockets:threads:unit:"MB/sec:cpu_affin" >> results.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file $results_file  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
+	echo ht_config:sockets:threads:unit:"MB/sec:cpu_affin" >> $results_file
 
 	while IFS= read -r lin_file
 	do
@@ -219,7 +220,7 @@ process_summary()
 		done < "$input1"
 		if [[ $avg  != "" ]]; then
 			test_results="Ran"
-			echo $ht_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results.csv
+			echo $ht_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> $results_file
 		fi
 	done < "$input"
 
