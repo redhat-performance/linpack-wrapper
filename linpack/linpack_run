@@ -21,6 +21,8 @@
 # This script automates the execution of linpack.  It will determine the
 # set of default run parameters based on the system configuration.
 #
+
+rtc=0
 error_exit()
 {
 	echo $1
@@ -322,13 +324,9 @@ if [ $use_pbench_version -eq 1 ]; then
 else
 	if [ $to_pbench -eq 0 ]; then
 		$TOOLS_BIN/validate_line --results_file linpack_results/$results_file --base_results_file $run_dir/base_test_results/test1/verify
-		if [[ $? -eq 0 ]]; then
-			echo Ran >> linpack_results/test_results_report
-		else
-			echo Failed >> linpack_results/test_results_report
-		fi
+		rtc=$?
 		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/$results_file --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out"
 
 	fi
 fi
-exit 0
+exit $rtc
