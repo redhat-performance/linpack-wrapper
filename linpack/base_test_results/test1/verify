@@ -1,28 +1,15 @@
 #
 # Main reg exp summary
+# ht_config:sockets:threads:unit:MB/sec:cpu_affin
 # :[1-9][0-9]{0,}:[1-9][0-9]{0,}:GFlops:[1-9][0-9.]{0,}:[0-9,]{1,}$
-#
-#   Field 1: Matches anything
-#   Field 2: None zero value
-#   Field 3: None zero value
-#   Field 4: Unit expected is GFLOPs
-#   Field 5: None zero value
-#   Field 6: List of cpus affinity to.
-#
-# Detailed description
-#
-#  [1-9][0-9]{0,}
-#    [1-9]: Matches a single digit from 1 to 9 (i.e., any non-zero digit).
-#    [0-9]{0,}: Matches zero or more occurrences of any digit (0-9).
-#  [1-9][0-9]{0,}
-#    [1-9]: Matches a single digit from 1 to 9 (i.e., any non-zero digit).
-#    [0-9]{0,}: Matches zero or more occurrences of any digit (0-9).
-#  GFlops:: Matches the literal string :GFlops:. This must appear exactly as written.
-#  [1-9][0-9.]{0,}
-#    [1-9]: Matches a single non-zero digit.
-#    [0-9.]{0,}: Matches zero or more occurrences of either a digit (0-9) or a literal dot (.). This allows for floating-point numbers
-#  [0-9,]{1,}: This is a character class that matches one or more occurrences of any comma separated digit (0-9) list.
-#  $: This is an anchor that matches the end of the line.
+# 
+#   Field 1 (ht_config): Matches anything
+#   Field 2 (sockets)[1-9][0-9]{0,}: Number of sockets we executed on. Positive non-zero value.
+#   Field 3 (threads) [1-9][0-9]{0,}: Number of threads executed. Positive non-zero value.
+#   Field 4 (GFLops): Unit expected is GFLOPs.  Exact match on the string.
+#   Field 5 (MB/sec) [1-9][0-9.]{0,}: MB/sec being reported by the test.  Postive non-zero decimal value.
+#   Field 6 (cpu_affin) [0-9,]{1,}$:List of cpus affinity to. Comma separated list of cpus that affinit
+#             is set to.
 #
 %_header
 ht_config:sockets:threads:unit:MB/sec:cpu_affin
