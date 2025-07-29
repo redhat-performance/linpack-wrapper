@@ -7,7 +7,7 @@
 #   Field 2 (sockets)[1-9][0-9]{0,}: Number of sockets we executed on. Positive non-zero value.
 #   Field 3 (threads) [1-9][0-9]{0,}: Number of threads executed. Positive non-zero value.
 #   Field 4 (GFLops): Unit expected is GFLOPs.  Exact match on the string.
-#   Field 5 (MB/sec) [1-9][0-9.]{0,}: MB/sec being reported by the test.  Postive non-zero decimal value.
+#   Field 5 (MB/sec) [1-9][0-9\.]{0,}: MB/sec being reported by the test.  Postive non-zero decimal value.
 #   Field 6 (cpu_affin) [0-9,]{1,}$:List of cpus affinity to. Comma separated list of cpus that affinit
 #             is set to.
 #
@@ -17,4 +17,4 @@ ht_config:sockets:threads:unit:MB/sec:cpu_affin
 # Multiple lines may be present.
 #
 %_multiples
-:[1-9][0-9]{0,}:[1-9][0-9]{0,}:GFlops:[1-9][0-9.]{0,}:[0-9,]{1,}$
+:[1-9][0-9]{0,}:[1-9][0-9]{0,}:GFlops:[1-9][0-9\.]{0,}:[0-9,]{1,}$
