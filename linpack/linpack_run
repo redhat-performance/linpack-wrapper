@@ -21,6 +21,8 @@
 # This script automates the execution of linpack.  It will determine the
 # set of default run parameters based on the system configuration.
 #
+
+rtc=0
 error_exit()
 {
 	echo $1
@@ -38,6 +40,8 @@ usage()
 }
 
 test_name="linpack"
+results_file="results_${test_name}.csv"
+
 if [ ! -f "/tmp/${test_name}.out" ]; then
         command="${0} $@"
         echo $command
@@ -319,8 +323,10 @@ if [ $use_pbench_version -eq 1 ]; then
 	copy_pbench_data
 else
 	if [ $to_pbench -eq 0 ]; then
-		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out"
-
+		$TOOLS_BIN/csv_to_json $to_json_flags --csv_file linpack_results/${results_file} --output_file ${test_name}.json
+		$TOOLS_BIN/verify_results $to_verify_flags --file ${test_name}.json --schema_file $run_dir/result_schema.py --class_name LinpackResults
+		rtc=$?
+		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/$results_file --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "*.json,linpack_results/test_results_report,${curdir}/hw_info.out"
 	fi
 fi
-exit 0
+exit $rtc
