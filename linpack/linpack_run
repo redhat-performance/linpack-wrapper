@@ -31,8 +31,6 @@ usage()
 {
 	echo "$1 Usage:"
 	echo "  --interleave: numactl interleave option"
-	echo "  --use_pbench_version: Instead of running the wrappers version"
-	echo "    of linpack, use pbench-linpack when pbench is requested"
 	source test_tools/general_setup --usage
 	exit 1
 }
@@ -74,7 +72,6 @@ fi
 setup_done=0
 out_file=""
 interleave="all"
-use_pbench_version=0
 show_usage=0
 
 #
@@ -125,9 +122,6 @@ fi
 # to_home_root: home directory
 # to_configuration: configuration information
 # to_times_to_run: number of times to run the test
-# to_pbench: Run the test via pbench
-# to_pbench_copy: Copy the data to the pbench repository, not move_it.
-# to_puser: User running pbench
 # to_run_label: Label for the run
 # to_user: User on the test system running the test
 # to_sys_type: for results info, basically aws, azure or local
@@ -137,46 +131,6 @@ fi
 
 ${curdir}/test_tools/gather_data ${curdir}
 source test_tools/general_setup "$@"
-
-copy_pbench_data()
-{
-	value=`$TOOLS_BIN/set_pbench_variables --host_config $to_configuration --sys_type $to_sys_type --test ${test_name} --pbench_user $to_puser --run_label $to_run_label`
-	results_prefix=`echo $value | cut -d: -f 2`
-
-	echo $TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy >> /tmp/debugging
-	$TOOLS_BIN/pbench_copy_data --hostname "${to_puser}_${to_run_label}" --user "${to_puser}" --prefix ${results_prefix} --copy $to_pbench_copy
-}
-
-execute_via_pbench()
-{
-	if [ $use_pbench_version -eq 1 ]; then
-		#
-		# Run original pbench-linpack
-		#
-		yum install -y pbench-linpack.x86_64
-		if [ $? -ne 0 ]; then
-			error_exit "yum install of pbench-linpack.x86_64 failed" 1
-		fi
-		echo "pbench-linpack --config ${to_configuration}_${to_tuned_setting}_iteration_${iteration}"
-		pbench-linpack --config ${to_configuration}_${to_tuned_setting}_iteration_${iteration} 
-		if [ $? -ne 0 ]; then
-			error_exit "pbench-linpack execution failed" 1
-		fi
-		#
-		# We do not have enough control of where pbench-linpack puts the results in pbench
-		# to match things if we ran without.  So remove the results and then do the copying by
-		# hand.
-		pushd /var/lib/pbench-agent
-		rm -f `ls -rt lin*copied | head -1`
-		popd
-	else
-		cd $curdir
-		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test $test_name --spacing 11 --pbench_stats $to_pstats
-		if [ $? -ne 0 ]; then
-			error_exit "executing linpack via pbench failed" 1
-		fi
-	fi
-}
 
 execute_via_shell()
 {
@@ -224,7 +178,6 @@ ARGUMENT_LIST=(
 )
 
 NO_ARGUMENTS=(
-	"use_pbench_version"
 )
 
 # read arguments
@@ -250,10 +203,6 @@ while [[ $# -gt 0 ]]; do
 		--interleave)
 			interleave=${2}
 			shift 2
-		;;
-		--use_pbench_version)
-			use_pbench_version=1
-			shift 1
 		;;
 		-h)
 			usage $test_name
@@ -283,44 +232,11 @@ rm -rf $run_dir/linpack/linpack_results  $run_dir/linpack/results*
 for iteration in  `seq 1 1 $to_times_to_run`
 do
 	out_file=/tmp/${test_name}_${to_tuned_setting}_numa_interleave_${interleave}_iteration_$iteration.out
-	if [ $to_pbench -eq 1 ]; then
-		execute_via_pbench
-	else
-		execute_via_shell
-	fi
+	execute_via_shell
 done
 
 #
 # Process the data.
 #
-if [ $use_pbench_version -eq 1 ]; then
-	results_prefix=$to_puser"_instance_"$to_configuration
-
-	dir=`ls -rtd /var/lib/pbench-agent/linpack_* | tail -1`
-	cd $dir
-	for i  in `ls -d *threads`
-	do
-		if [[ ! -d /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i ]]; then
-			mkdir -p /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i
-		fi
-		cd $i
-		for j in `ls -d  sample*`
-		do
-			if [[ ! -d /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i/$j ]]; then
-				mkdir -p /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i/$j
-			fi
-			cp $j/result.txt /tmp/results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}/$i/$j
-		done
-		cd ..
-	done
-	cd /tmp
-	tar cf results_pbench_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}_numa_interleave_${interleave}
-
-	copy_pbench_data
-else
-	if [ $to_pbench -eq 0 ]; then
-		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out"
-
-	fi
-fi
+${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out"
 exit 0
