@@ -21,6 +21,7 @@
 # This script automates the execution of linpack.  It will determine the
 # set of default run parameters based on the system configuration.
 #
+
 error_exit()
 {
 	echo $1
@@ -253,14 +254,39 @@ do
 	# and log the iteration's result
 
 	if [[ $to_use_pcp -eq 1 ]]; then
-		echo "Send result to PCP archive"
-		echo ${iteration}
-		result2pcp iteration_number ${iteration}
+		linpack_data=`mktemp /tmp/passmark_data.XXXXX`
+		results2pcp_add_value "iteration:${iteration}"
+		grep ^ht linpack_results/results.csv  | grep -v cpu_affin > $linpack_data
+		while IFS= read -r line
+		do
+			value=`echo $line | cut -d: -f1`
+			if [[ $value == *"yes"* ]]; then
+				results2pcp_add_value "hyper_thread:1"
+			else
+				results2pcp_add_value "hyper_thread:0"
+			fi
+			value=`echo $line | cut -d: -f2`
+			results2pcp_add_value "numb_sockets:$value"
+			value=`echo $line | cut -d: -f3`
+			results2pcp_add_value "numthreads:$value"
+			value=`echo $line | cut -d: -f5`
+			results2pcp_add_value "gflops:$value"
+			#
+			# Commit the metrics
+			#
+			results2pcp_add_value_commit
+		done < "${linpack_data}"
+		rm $linpack_data
+		#
+		# Reset metrics
+		#
+		reset_pcp_om
 		stop_pcp_subset
 	fi
 done
 
 if [[ $to_use_pcp -eq 1 ]]; then
+	stop_pcp
 	shutdown_pcp
 fi
 
