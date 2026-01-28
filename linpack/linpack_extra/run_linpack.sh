@@ -225,7 +225,7 @@ process_summary()
 		done < "$input1"
 		if [[ $avg  != "" ]]; then
 			test_results="Ran"
-			data_string=$(build_data_string "$ht_setting" "$sockets" "$threads" "$unit" "$avg" "$cpu_affin" "$start_time" "$end_time")
+			data_string=$(build_data_string "$ht_setting" "$sockets" "$threads" "$unit" "$avg" "$cpu_affin")
 
 			echo "$data_string" >> results.csv
 		fi
