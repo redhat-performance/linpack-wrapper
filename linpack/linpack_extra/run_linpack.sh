@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-TOOLS_BIN="/"
+source $TOOLS_BIN/helpers.inc
 max_threads=0
 threads_to_do=0
 iterations=5
@@ -33,6 +33,8 @@ NUMB_SOCKETS=""
 reduce_only=0
 test_name="linpack"
 test_version="1.0"
+start_time=""
+end_time=""
 
 out_dir=`pwd`/linpack_results
 if [[ -d "$out_dir" ]]; then
@@ -85,6 +87,10 @@ execute_ht()
 	socket_mappings=`cat /tmp/socket_mappings`
 	sockets=1
 	ht_config="ht_yes_1_socket_hyp"
+	#
+	# For now the whole run time will be save in the csv file.
+	#
+	start_time=$(retrieve_time_stamp)
 	for cpu_list in $socket_mappings; do
 		nh_threads=`grep -o ',' <<<"$cpu_list" | grep -c .`
 		let "nh_threads=$nh_threads+1"
@@ -111,6 +117,7 @@ execute_ht()
 			execute_linpack
 		fi
 	done
+	end_time=$(retrieve_time_stamp)
 }
 
 execute_non_ht()
@@ -173,8 +180,7 @@ process_summary()
 	iters=0
 	input="/tmp/linpack_temp"
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name
-	echo ht_config:sockets:threads:unit:"MB/sec:cpu_affin" >> results.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name --field_header "ht_config,sockets,threads,unit,MB/sec,cpu_affin,Start_time,End_time"
 
 	while IFS= read -r lin_file
 	do
@@ -197,7 +203,7 @@ process_summary()
 			do
 				if [[ $have_cpus == "0" ]]; then
 					have_cpus=1
-					cpu_affin=`echo $data | cut -d' ' -f3`
+					cpu_affin=`echo $data | cut -d' ' -f3 | sed "s/,/./g"`
 				fi
 				if [[ $data == *"Size"* ]]; then
 					unit=`echo $data | cut -d' ' -f 5`
@@ -219,7 +225,9 @@ process_summary()
 		done < "$input1"
 		if [[ $avg  != "" ]]; then
 			test_results="Ran"
-			echo $ht_setting:$sockets:$threads:$unit:$avg:$cpu_affin >> results.csv
+			data_string=$(build_data_string "$ht_setting" "$sockets" "$threads" "$unit" "$avg" "$cpu_affin" "$start_time" "$end_time")
+
+			echo "$data_string" >> results.csv
 		fi
 	done < "$input"
 
@@ -254,7 +262,6 @@ usage()
 	echo "  -i: value: number of iterationsto run"
 	echo "  -n: numactl interleave"
 	echo "  -s: sanity run"
-	echo "  -T: Tools bin to find test_header_info in"
 	echo "  -t: max threads: maximum number of threads"
 	exit 1
 }
@@ -286,9 +293,6 @@ while getopts "RC:ci:t:h:P:s:u:oS:n:T:" opt; do
 		;;
 		R)
 			reduce_only=1
-		;;
-		T)
-			TOOLS_BIN=${OPTARG}
 		;;
 		t)
 			threads_list=${OPTARG}

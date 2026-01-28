@@ -132,6 +132,7 @@ fi
 
 ${curdir}/test_tools/gather_data ${curdir}
 source test_tools/general_setup "$@"
+export TOOLS_BIN
 
 execute_via_shell()
 {
@@ -156,16 +157,16 @@ execute_via_shell()
 			test_config=`echo "${linpack_ops}" | cut -d':' -f 1`
 			config="${to_configuration}_${test_config}"
 			cd $run_dir/${test_name}
-			echo ./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
-			./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+			echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
+			./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 			if [ $? -ne 0 ]; then
 				error_exit "run_linpack.sh failed" 1
 			fi
 		done  < "$file"
 	else
 		cd $run_dir/${test_name}
-		echo ./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
-		./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+		echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
+		./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 		if [ $? -ne 0 ]; then
 			error_exit "run_linpack.sh failed" 1
 		fi
@@ -265,11 +266,11 @@ do
 			else
 				results2pcp_add_value "hyper_thread:0"
 			fi
-			value=`echo $line | cut -d: -f2`
+			value=`echo $line | cut -d, -f2`
 			results2pcp_add_value "numb_sockets:$value"
-			value=`echo $line | cut -d: -f3`
+			value=`echo $line | cut -d, -f3`
 			results2pcp_add_value "numthreads:$value"
-			value=`echo $line | cut -d: -f5`
+			value=`echo $line | cut -d, -f5`
 			results2pcp_add_value "gflops:$value"
 			#
 			# Commit the metrics
