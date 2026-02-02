@@ -261,13 +261,17 @@ do
 		while IFS= read -r line
 		do
 			value=`echo $line | cut -d: -f1`
+			#
+			# Note: If we ever get to having more then 2 hyperthreads in the future, this
+			# will need to be updated.  For now value of 1 indicates 2 hyperthreads.
+			#
 			if [[ $value == *"yes"* ]]; then
 				results2pcp_add_value "hyper_thread:1"
 			else
 				results2pcp_add_value "hyper_thread:0"
 			fi
 			value=`echo $line | cut -d, -f2`
-			results2pcp_add_value "numb_sockets:$value"
+			results2pcp_add_value "num_sockets:$value"
 			value=`echo $line | cut -d, -f3`
 			results2pcp_add_value "numthreads:$value"
 			value=`echo $line | cut -d, -f5`

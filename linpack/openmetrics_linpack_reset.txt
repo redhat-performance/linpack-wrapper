@@ -5,5 +5,5 @@ runtime NaN
 throughput NaN
 latency NaN
 hyper_thread NaN
-numb_sockets NaN
+num_sockets NaN
 gflops NaN
