@@ -255,7 +255,7 @@ do
 	# and log the iteration's result
 
 	if [[ $to_use_pcp -eq 1 ]]; then
-		linpack_data=`mktemp /tmp/passmark_data.XXXXX`
+		linpack_data=`mktemp /tmp/linpack_data.XXXXX`
 		results2pcp_add_value "iteration:${iteration}"
 		grep ^ht linpack_results/results.csv  | grep -v cpu_affin > $linpack_data
 		while IFS= read -r line
