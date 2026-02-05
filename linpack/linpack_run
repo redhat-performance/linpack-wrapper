@@ -21,6 +21,7 @@
 # This script automates the execution of linpack.  It will determine the
 # set of default run parameters based on the system configuration.
 #
+
 error_exit()
 {
 	echo $1
@@ -131,6 +132,7 @@ fi
 
 ${curdir}/test_tools/gather_data ${curdir}
 source test_tools/general_setup "$@"
+export TOOLS_BIN
 
 execute_via_shell()
 {
@@ -155,16 +157,16 @@ execute_via_shell()
 			test_config=`echo "${linpack_ops}" | cut -d':' -f 1`
 			config="${to_configuration}_${test_config}"
 			cd $run_dir/${test_name}
-			echo ./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
-			./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+			echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
+			./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 			if [ $? -ne 0 ]; then
 				error_exit "run_linpack.sh failed" 1
 			fi
 		done  < "$file"
 	else
 		cd $run_dir/${test_name}
-		echo ./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
-		./run_linpack.sh -T $TOOLS_BIN -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
+		echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
+		./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 		if [ $? -ne 0 ]; then
 			error_exit "run_linpack.sh failed" 1
 		fi
@@ -253,14 +255,43 @@ do
 	# and log the iteration's result
 
 	if [[ $to_use_pcp -eq 1 ]]; then
-		echo "Send result to PCP archive"
-		echo ${iteration}
-		result2pcp iteration_number ${iteration}
+		linpack_data=`mktemp /tmp/linpack_data.XXXXX`
+		results2pcp_add_value "iteration:${iteration}"
+		grep ^ht linpack_results/results.csv  | grep -v cpu_affin > $linpack_data
+		while IFS= read -r line
+		do
+			value=`echo $line | cut -d: -f1`
+			#
+			# Note: If we ever get to having more then 2 hyperthreads in the future, this
+			# will need to be updated.  For now value of 1 indicates 2 hyperthreads.
+			#
+			if [[ $value == *"yes"* ]]; then
+				results2pcp_add_value "hyper_thread:1"
+			else
+				results2pcp_add_value "hyper_thread:0"
+			fi
+			value=`echo $line | cut -d, -f2`
+			results2pcp_add_value "num_sockets:$value"
+			value=`echo $line | cut -d, -f3`
+			results2pcp_add_value "numthreads:$value"
+			value=`echo $line | cut -d, -f5`
+			results2pcp_add_value "gflops:$value"
+			#
+			# Commit the metrics
+			#
+			results2pcp_add_value_commit
+		done < "${linpack_data}"
+		rm $linpack_data
+		#
+		# Reset metrics
+		#
+		reset_pcp_om
 		stop_pcp_subset
 	fi
 done
 
 if [[ $to_use_pcp -eq 1 ]]; then
+	stop_pcp
 	shutdown_pcp
 fi
 
