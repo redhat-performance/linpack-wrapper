@@ -31,7 +31,6 @@ cpus_in_sock=""
 GOMP_CPU_AFFINITY=""
 NUMB_SOCKETS=""
 reduce_only=0
-test_name="linpack"
 test_version="1.0"
 start_time=""
 end_time=""
@@ -180,7 +179,7 @@ process_summary()
 	iters=0
 	input="/tmp/linpack_temp"
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name --field_header "ht_config,sockets,threads,unit,MB/sec,cpu_affin,Start_time,End_time"
+	$TOOLS_BIN/test_header_info --front_matter --results_file results_${test_name}.csv  $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $test_version --test_name $test_name --field_header "ht_config,sockets,threads,unit,MB_per_sec,cpu_affin"
 
 	while IFS= read -r lin_file
 	do
@@ -225,9 +224,8 @@ process_summary()
 		done < "$input1"
 		if [[ $avg  != "" ]]; then
 			test_results="Ran"
-			data_string=$(build_data_string "$ht_setting" "$sockets" "$threads" "$unit" "$avg" "$cpu_affin")
-
-			echo "$data_string" >> results.csv
+			data_string=$(build_data_string "$ht_setting" "$sockets" "$threads" "$unit" "$avg" "$cpu_affin" "$start_time" "$end_time")
+			echo "$data_string" >> results_${test_name}.csv
 		fi
 	done < "$input"
 
