@@ -22,6 +22,9 @@
 # set of default run parameters based on the system configuration.
 #
 
+script_dir=$(realpath $(dirname $0))
+TOOLS_BIN="${HOME}"/test_tools
+export TOOLS_BIN
 error_exit()
 {
 	echo $1
@@ -32,11 +35,12 @@ usage()
 {
 	echo "$1 Usage:"
 	echo "  --interleave: numactl interleave option"
-	source test_tools/general_setup --usage
+	source ${TOOLS_BIN}/general_setup --usage
 	exit 1
 }
 
 test_name="linpack"
+export test_name
 if [ ! -f "/tmp/${test_name}.out" ]; then
         command="${0} $@"
         echo $command
@@ -104,8 +108,8 @@ done
 # Check to see if the test tools directory exists.  If it does, we do not need to
 # clone the repo.
 #
-if [ ! -d "test_tools" ]; then
-        git clone $tools_git test_tools
+if [ ! -d "${TOOLS_BIN}" ]; then
+        git clone $tools_git ${TOOLS_BIN}
         if [ $? -ne 0 ]; then
                 error_exit "pulling git $tools_git failed." 1
         fi
@@ -130,9 +134,7 @@ fi
 # to_tuned_setting: tuned setting
 #
 
-${curdir}/test_tools/gather_data ${curdir}
-source test_tools/general_setup "$@"
-export TOOLS_BIN
+source ${TOOLS_BIN}/general_setup "$@"
 
 execute_via_shell()
 {
@@ -228,7 +230,7 @@ fi
 chmod 755 ${run_dir}/linpack/xlinpack_xeon64
 
 # Gather hardware information
-${curdir}/test_tools/gather_data ${curdir}
+${TOOLS_BIN}/gather_data ${curdir}
 
 rm -rf $run_dir/linpack/linpack_results  $run_dir/linpack/results*
 
@@ -257,7 +259,7 @@ do
 	if [[ $to_use_pcp -eq 1 ]]; then
 		linpack_data=`mktemp /tmp/linpack_data.XXXXX`
 		results2pcp_add_value "iteration:${iteration}"
-		grep ^ht linpack_results/results.csv  | grep -v cpu_affin > $linpack_data
+		grep ^ht linpack_results/results_${test_name}.csv  | grep -v cpu_affin > $linpack_data
 		while IFS= read -r line
 		do
 			value=`echo $line | cut -d: -f1`
@@ -298,5 +300,9 @@ fi
 #
 # Process the data.
 #
-${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out" $pdir
-exit 0
+${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file linpack_results/results_${test_name}.csv --output_file linpack_results/results_${test_name}.json
+${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/results_schema.py --class_name Linpack_Results --file linpack_results/results_${test_name}.json
+rtc=$?
+
+${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --results linpack_results/results_${test_name}.csv --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user --other_files "linpack_results/test_results_report,${curdir}/hw_info.out" $pdir
+exit $rtc
