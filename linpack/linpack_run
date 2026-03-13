@@ -36,7 +36,7 @@ usage()
 	echo "$1 Usage:"
 	echo "  --interleave: numactl interleave option"
 	source ${TOOLS_BIN}/general_setup --usage
-	exit 1
+	exit $E_USAGE
 }
 
 test_name="linpack"
@@ -138,7 +138,7 @@ attempt_tools_git()
         if [[ ! -d "$TOOLS_BIN" ]]; then
                 git clone $tools_git "$TOOLS_BIN"
                 if [ $? -ne 0 ]; then
-                        exit_out "Error: pulling git $tools_git failed." 1
+                        error_out "Error: pulling git $tools_git failed." $E_GENERAL
                 fi
         fi
 }
@@ -199,7 +199,7 @@ execute_via_shell()
 			echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave
 			./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 			if [ $? -ne 0 ]; then
-				error_exit "run_linpack.sh failed" 1
+				error_exit "run_linpack.sh failed" $E_GENERAL
 			fi
 		done  < "$file"
 	else
@@ -207,7 +207,7 @@ execute_via_shell()
 		echo ./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname  -n $interleave
 		./run_linpack.sh -u \"$to_user\" -h $to_home_root -C $to_configuration -i $to_times_to_run -P $to_tuned_setting -s $to_sysname -n $interleave >> $out_file
 		if [ $? -ne 0 ]; then
-			error_exit "run_linpack.sh failed" 1
+			error_exit "run_linpack.sh failed" $E_GENERAL
 		fi
 	fi
 }
@@ -252,7 +252,7 @@ while [[ $# -gt 0 ]]; do
 			break; 
 		;;
 		*)
-			error_exit "option not found $1" 1
+			error_exit "option not found $1" $E_PARSE_ARGS
 		;;
         esac
 done
@@ -262,7 +262,7 @@ if [[ ! -d "$run_dir/linpack" ]]; then
 fi
 cp ${curdir}/uploads/xlinpack_xeon64-NEW ${run_dir}/linpack/xlinpack_xeon64
 if [ $? -ne 0 ]; then
-	error_exit "Error, did not find xlinpack_xeon64-NEW" 1
+	error_exit "Error, did not find xlinpack_xeon64-NEW" $E_GENERAL
 fi
 chmod 755 ${run_dir}/linpack/xlinpack_xeon64
 
