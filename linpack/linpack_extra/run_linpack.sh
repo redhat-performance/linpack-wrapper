@@ -246,7 +246,7 @@ execute_linpack()
 		echo ./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
 		./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
 		if [ $? -ne 0 ]; then
-			exit_out "linpack execution failed 1" $E_GENERAL
+			exit_out "linpack execution failed" $E_GENERAL
 		fi
 	done
 }
