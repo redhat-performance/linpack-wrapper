@@ -167,6 +167,11 @@ fi
 #
 
 source ${TOOLS_BIN}/general_setup "$@"
+package_tool --no_packages $to_no_pkg_install --wrapper_config $script_dir/../linpack.json
+prtc=$?
+if [[ $prtc != 0 ]]; then
+	error_exit "Error: Installation of package issue" $prtc
+fi
 
 execute_via_shell()
 {
