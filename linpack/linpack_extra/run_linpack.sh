@@ -17,6 +17,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 source $TOOLS_BIN/helpers.inc
+source $TOOLS_BIN/error_codes
 max_threads=0
 threads_to_do=0
 iterations=5
@@ -245,7 +246,7 @@ execute_linpack()
 		echo ./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
 		./runN.sh -n $interleave -t ${OMP_NUM_THREADS} >> $out_file
 		if [ $? -ne 0 ]; then
-			exit_out "linpack execution failed 1" 1
+			exit_out "linpack execution failed" $E_GENERAL
 		fi
 	done
 }
@@ -261,7 +262,7 @@ usage()
 	echo "  -n: numactl interleave"
 	echo "  -s: sanity run"
 	echo "  -t: max threads: maximum number of threads"
-	exit 1
+	exit $E_USAGE
 }
 
 show_config=0
@@ -316,7 +317,7 @@ if [ $reduce_only -eq 1 ]; then
 	pushd /tmp
 	process_summary
 	popd
-	exit 0
+	exit $E_SUCCESS
 fi
 
 PREFIX=test
@@ -396,7 +397,7 @@ if [ $show_config -gt 0 ]; then
 			echo socket: $socket: ${cpus_in_sock[$socket]}
 		done
 	fi
-	exit 0
+	exit $E_SUCCESS
 fi
 
 
@@ -411,4 +412,4 @@ else
 fi
 
 process_summary
-exit 0
+exit $E_SUCCESS

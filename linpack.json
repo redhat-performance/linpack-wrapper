@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "rhel": [
+      "bc",
+      "numactl",
+      "perf",
+      "unzip",
+      "git",
+      "zip"
+    ],
+    "ubuntu": [
+      "unzip",
+      "zip"
+    ],
+    "amzn": [
+      "bc",
+      "unzip",
+      "zip"
+    ],
+    "sles": [
+      "bc",
+      "libnuma1",
+      "git",
+      "unzip",
+      "zip"
+    ]
+  }
+}
